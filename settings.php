@@ -16,7 +16,7 @@ $old_error_handler = set_error_handler("mypointnow_error_handler");
 //setup DB info
 $GLOBALS['db_host']		= "localhost";
 $GLOBALS['db_user']		= "root";
-$GLOBALS['db_password']	= "redfaced55";
+$GLOBALS['db_password']	= "";
 $GLOBALS['db_name']		= "vttodo";
 $GLOBALS['db_connection'] = mysql_connect($GLOBALS['db_host'], $GLOBALS['db_user'], $GLOBALS['db_password']);
 mysql_select_db($GLOBALS['db_name'], $GLOBALS['db_connection']);
