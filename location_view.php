@@ -6,14 +6,15 @@ include_once($_SERVER['DOCUMENT_ROOT']."/settings.php");
 
 //start displaying an html page
 include_once($GLOBALS['includes_root']."/global_applications/html_page.php");
-app_html_page_header("View");
 
-//banner and menu
-include('banner.php');
-include('menu.php');
-echo '<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key='.$GLOBALS['google_api_key'].'&sensor=false"></script>';
-include_once($GLOBALS['includes_root']."/global_applications/location_view.php");
-location_view($_REQUEST['id']);
+ob_start();
+	include_once($GLOBALS['includes_root']."/global_applications/location_view.php");
+	location_view($_REQUEST['id']);
+$output = ob_get_clean();
+
+app_html_page_header_mobile($GLOBALS['title']);
+
+jqm_page('location_view_'.$_REQUEST['id'], $output, array("data-cache='false'"));
 
 //end the html page
-app_html_page_footer();
+app_html_page_footer_mobile();

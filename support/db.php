@@ -5,8 +5,8 @@
 include_once($_SERVER['DOCUMENT_ROOT']."/settings.php");
 
 if(isset($_REQUEST['you_shall_not_pass']) 
-	&& $_REQUEST['you_shall_not_pass'] == ''
-	&& $_REQUEST['you_shall_not_pass2'] == '')
+	&& $_REQUEST['you_shall_not_pass'] == '44'
+	&& $_REQUEST['you_shall_not_pass2'] == '84')
 	$_SESSION['db_allow'] = true;
 
 

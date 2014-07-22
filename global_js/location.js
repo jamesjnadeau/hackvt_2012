@@ -1,15 +1,95 @@
 
+gps_disabled_message = 'You have denied us access to your location. Please change your device settings to use this feature. If you need assistance please use the "Help" button in the menu.';
+gps_missing_message = 'Your browser does not support geolocation services. Please Upgrade your browser to use this feature.';
+//from https://github.com/gwilson/getAccurateCurrentPosition/blob/master/geo.js
+//with modification
+getAccurateCurrentPosition = function (geolocationSuccess, geolocationError, options) 
+{
+	var lastCheckedPosition;
+	var locationEventCount = 0;
+	
+	var location_semaphore = true;
+	
+	options = options || {};
+	
+	var checkLocation = function (position) 
+	{
+		console.log('checking position');
+		lastCheckedPosition = position;
+		++locationEventCount;
+		// We ignore the first event unless it's the only one received because some devices seem to send a cached
+		// location even when maxaimumAge is set to zero
+		if ((position.coords.accuracy <= options.desiredAccuracy) && (locationEventCount > 0)) 
+		{
+			clearTimeout(timerID);
+			navigator.geolocation.clearWatch(watchID);
+			foundPosition(position);
+		} 
+		else 
+		{
+			//geoprogress(position);
+			console.log(JSON.stringify(position));
+		}
+	}
+	
+	var stopTrying = function () 
+	{
+		navigator.geolocation.clearWatch(watchID);
+		foundPosition(lastCheckedPosition);
+	}
+
+	var onError = function (error) 
+	{
+		clearTimeout(timerID);
+		navigator.geolocation.clearWatch(watchID);
+		geolocationError(error);
+	}
+	
+	var foundPosition = function (position) 
+	{
+		if(location_semaphore)
+		{
+			location_semaphore = false;
+			geolocationSuccess(position);
+		}
+	}
+	
+	if (!options.maxWait)
+		options.maxWait = 3; // Default 10 seconds
+	if (!options.desiredAccuracy)    
+		options.desiredAccuracy = 20; // Default 20 meters
+	if (!options.timeout)
+		options.timeout = options.maxWait; // Default to maxWait
+	
+	options.maximumAge = 0; // Force current locations only
+	options.enableHighAccuracy = true; // Force high accuracy (otherwise, why are you using this function?)
+	
+	var watchID = navigator.geolocation.watchPosition(checkLocation, onError, options);
+	var timerID = setTimeout(stopTrying, options.maxWait); // Set a timeout that will abandon the location loop
+}
+
 position_accuracy_fails = 0;
-position_required_accuracy = 75;
+position_required_accuracy = 100000;
 position_request_time = 0;
 position_timeout = 2000;
+
 // this is called when the browser has shown support of navigator.geolocation
 function location_accepted(position) 
 {
 	my_lat_long =  position.coords.latitude + ',' + position.coords.longitude;
 	
-	//console.log(position);
+	console.log(position);
 	
+	$.mobile.loading( 'hide');
+	
+	$.mobile.changePage('/', 
+	{
+		type: "get",
+		data: {location_current: my_lat_long, location_accuracy: position.coords.accuracy},
+		//dataUrl: redirect_url
+	});
+	
+	/*
 	if(position_accuracy_fails > 20)
 	{
 		$('.loading').hide();
@@ -50,23 +130,18 @@ function location_accepted(position)
 		$('.loading').hide();
 		$('.location_form :submit').removeAttr("disabled");
 	}
+	* */
 }
 
 position_declined_error_count = 1;
 function location_declined(error) 
 {
-	$('.loading').hide();
-	$('.location_form :submit').attr("disabled", "disabled");
-	position_declined_error_count++;
-	$('.geolocate_notification').html(
-		//'Error: ' + error.message
-		//+ '<br/> Trying again after ' + position_declined_error_count + ' errors'
-		'Unable to get your location<br/><br/>Please make sure your location services are enabled<br/><br/>If asked, please allow this site to get your location'
-		);
-	$('.geolocate_notification').removeClass('hidden');
+	$.mobile.loading( 'hide');
 	
-	if (position_declined_error_count < 10)
-		mypoint_location_get_position();
+	console.log(JSON.stringify(error));
+	
+	if(error.code != 3)
+		alert(gps_disabled_message);
 }
 
 function mypoint_location_get_position()
@@ -74,34 +149,8 @@ function mypoint_location_get_position()
 	navigator.geolocation.getCurrentPosition(location_accepted, location_declined, {enableHighAccuracy:true, maximumAge:1000, timeout:10000});
 }
 
-$(document).ready(function() 
+//$(document).ready(function() 
+$(document).on('pageshow', function()
 {
-	//disable set location button
-	$('.location_form :submit').attr("disabled", "disabled");
-	
-	if (navigator.geolocation) 
-	{
-		$('.geolocate_notification').html(
-			'Trying get location this may take up to 10 seconds'
-			//+ '<br/> Try number ' + position_accuracy_fails
-			);
-		$('.geolocate_notification').removeClass('hidden');
-		mypoint_location_get_position();
-	}
-	else
-	{
-		$('#geolocate_notification').html('Your browser does not support geolocation.');
-	}
-	
-	$('.location_form :submit').click(function() 
-	{
-		var current_time = new Date().getTime();
-		var diff = current_time - position_request_time;
-		if(diff < 10000)
-		{
-			console.log('time check failed with ' + diff + ' < 10000 ');
-			mypoint_location_get_position();
-		}
-	}
-	);
+	console.log('pageshow');
 });

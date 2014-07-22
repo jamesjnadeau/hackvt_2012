@@ -101,7 +101,7 @@ class Location
 	
 	function get_all_options()
 	{
-		$query = "SELECT * from options";
+		$query = "SELECT * from options ORDER BY name";
 		debug($query);
 		$info = false;
 		$result = mysql_query($query) or debug($query);
@@ -127,7 +127,7 @@ class Location
 					JOIN options on options.option_id = location_options.option_id
 					HAVING `distance` <= '$radius' 
 					ORDER BY `distance` ASC
-					LIMIT 5
+					LIMIT 20
 					#GROUP BY location.id";
 		$info = false;
 		$result = mysql_query($query) or debug($query);
@@ -154,7 +154,7 @@ class Location
 					#LEFT JOIN options on options.options_id = location_options.options_id
 					HAVING `distance` <= '$radius' 
 					ORDER BY `distance` ASC
-					LIMIT 10
+					LIMIT 20
 					#GROUP BY location.id";
 		
 		$info = false;

@@ -32,6 +32,12 @@ function calculate_distance($lat1, $lon1, $lat2, $lon2, $unit="M") {
 // Create a map using Google Maps API
 function show_map($locations, $map_center, $map_canvas = 'map', $width = '100%', $height = '300px', $draggable = 'false', $show_script = true, $zoom = 8) 
 {
+	if(isset($GLOBALS['is_mobile']))
+	{
+		show_map_mobile($locations, $map_center, $map_canvas, $width, $height, $draggable, $show_script, $zoom) ;
+		return;
+	}
+	
 	if ($draggable == TRUE)
 		$draggable = 'true';
 	elseif ($draggable == FALSE)
@@ -135,77 +141,116 @@ function initialize_'.$map_canvas.'()
 </script>';
 }
 
-/** Added by Kyle
- * Custom function to detect whether or not a user is using a mobile browser
-
- 
-function is_mobile()
+function show_map_mobile($locations, $map_center, $map_canvas = 'map', $width = '100%', $height = '300px', $draggable = 'false', $show_script = false, $zoom = 8) 
 {
-	if(isset($_SESSION['is_mobile']))
-	{
-		return $_SESSION['is_mobile'];
-	}
-	else
-	{
-		include_once($GLOBALS['includes_root']."/classes/mobile_detect.class.php");
-		$detect = new Mobile_Detect;
-		if($detect->isMobile()) 
-		{
-			$_SESSION['is_mobile'] = true;
-			return true;
-		}
-		else
-		{
-			$_SESSION['is_mobile'] = false;
-			return false;
-		}
-	}
-}
-
-function is_tablet()
-{
-	if(isset($_SESSION['is_tablet']))
-	{
-		return $_SESSION['is_tablet'];
-	}
-	else
-	{
-		include_once($GLOBALS['includes_root']."/classes/mobile_detect.class.php");
-		$detect = new Mobile_Detect;
+	if ($draggable == TRUE)
+		$draggable = 'true';
+	elseif ($draggable == FALSE)
+		$draggable = 'false';
 		
-		if($detect->isTablet()) 
+	$location_string = '';
+	
+	if (is_array($locations)) 
+	{
+		$location_string .= '[';
+		foreach($locations as $location) 
 		{
-			$_SESSION['is_tablet'] = true;
-			return true;
+			$location_string .= '[new google.maps.LatLng('.$location['lat'].','.$location['long'].'), "'.$location['info'].'" ],';
 		}
-		else
+		$location_string .= ']';
+	}
+	else 
+	{
+		$location_string .= '['.$locations.']';
+	}
+	$location_string = str_replace(',]', ']', $location_string);
+	
+	$map_center = str_replace('-0', '-', $map_center);
+	
+	echo '
+	<div id="'.$map_canvas.'" class="mobile_map" style="width:'.$width.'; height:'.$height.'; border: 1px solid #ccc;"></div>';
+	
+	//if ($show_script == true)
+		//echo '<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?sensor=false"></script>';
+		
+		echo '
+<script type="text/javascript">
+	
+var map_center_'.$map_canvas.' = new google.maps.LatLng('.$map_center.');
+
+var data_points_'.$map_canvas.' = '.$location_string.';
+
+var iterator_'.$map_canvas.' = 0;
+
+var '.$map_canvas.';
+
+var current_window_'.$map_canvas.';
+';
+
+	//solution to this problem found here:
+	//http://stackoverflow.com/questions/9221259/jquery-mobile-not-loading-google-map-except-on-refresh
+	echo '
+	jQuery("div:jqmData(role=\'page\'):last").bind("pageinit", function()
+	{
+		//console.log("map pagecreate event triggered");
+		initialize_'.$map_canvas.'(); 
+		
+		
+	});
+	
+	
+	jQuery("div:jqmData(role=\'page\'):last").bind("pageshow",function()
+	{
+			//console.log("map pageshow event triggered");
+			google.maps.event.trigger('.$map_canvas.', "resize");
+			'.$map_canvas.'.setCenter(map_center_'.$map_canvas.');
+	});';
+	
+echo '
+function initialize_'.$map_canvas.'() 
+{
+	var mapOptions_'.$map_canvas.' = 
+	{
+		zoom: '.$zoom.',
+		mapTypeId: google.maps.MapTypeId.ROADMAP,
+		draggable: '.$draggable.',
+		center: map_center_'.$map_canvas.'
+	};
+	'.$map_canvas.' = new google.maps.Map(document.getElementById("'.$map_canvas.'"), mapOptions_'.$map_canvas.');
+	//drop_'.$map_canvas.'();
+	
+	'.$map_canvas.'_markers = [];
+	'.$map_canvas.'_info = [];
+	for (var i = 0; i < data_points_'.$map_canvas.'.length; i++) 
+	{
+		/* Creates the info windows for the marker*/  
+		var infowindow = new google.maps.InfoWindow(
 		{
-			$_SESSION['is_tablet'] = false;
-			return false;
-		}
+			content: data_points_'.$map_canvas.'[i][1],
+			size: new google.maps.Size(50,50)
+		});
+		
+		var marker = new google.maps.Marker({
+			position: data_points_'.$map_canvas.'[i][0],
+			//animation: google.maps.Animation.DROP,
+			map: '.$map_canvas.'
+		});
+		
+		marker.my_infowindow = infowindow;
+		
+		/* Adds click function to the markers */  
+		google.maps.event.addListener(marker, \'click\', function() 
+		{
+			this.my_infowindow.open('.$map_canvas.', this);
+		});
+		
+		'.$map_canvas.'_markers.push(marker);
+		'.$map_canvas.'_info.push(infowindow);
 	}
+	console.log('.$map_canvas.'_info);
 }
-
-function is_ios()
-{
-
-	if(preg_match_all("/iPhone OS (\d+)_(\d+)\s+/", $_SERVER['HTTP_USER_AGENT'], $matches)){
-		$version = $matches[1][0].'.'.$matches[2][0];
-		return $version;
-	}
-	else
-		return false;
+</script>';
 }
-
-function is_android()
-{
-	if(preg_match_all("/Android (\d+(?:\.\d+)+);/i", $_SERVER['HTTP_USER_AGENT'], $matches)){
-		$version = $matches[1][0];
-		return $version;
-	}
-	else
-		return false;
-} */
 
 function geocode($address) 
 {
@@ -683,4 +728,130 @@ function upload_image_form($type, $max_width = 1024, $max_height = 1024, $user_i
 	{
 		echo '<input type="file" capture="camera" name="image_for_upload" id="image_for_upload">';
 	}
+}
+
+function is_mobile()
+{
+	if(isset($_SESSION['is_mobile']))
+	{
+		if ($_SESSION['is_mobile'] == true)
+			return $_SESSION['is_mobile'];
+		else
+			return false;
+	}
+	else
+	{
+		include_once($GLOBALS['includes_root']."/classes/mobile_detect.class.php");
+		$detect = new Mobile_Detect;
+		if($detect->isMobile()) 
+		{
+			$_SESSION['is_mobile'] = true;
+			$_SESSION['jquery.mobile'] = true;
+			return true;
+		}
+		else
+		{
+			$_SESSION['is_mobile'] = false;
+			return false;
+		}
+	}
+}
+
+function is_tablet()
+{
+	if(isset($_SESSION['is_tablet']))
+	{
+		return $_SESSION['is_tablet'];
+	}
+	else
+	{
+		include_once($GLOBALS['includes_root']."/classes/mobile_detect.class.php");
+		$detect = new Mobile_Detect;
+		
+		if($detect->isTablet()) 
+		{
+			$_SESSION['is_tablet'] = true;
+			return true;
+		}
+		else
+		{
+			$_SESSION['is_tablet'] = false;
+			return false;
+		}
+	}
+}
+
+function is_app()
+{
+	if(isset($_SESSION['is_app']))
+		return $_SESSION['is_app'];
+	else
+	{
+		if(preg_match_all("/phonegap-roam/", $_SERVER['HTTP_USER_AGENT'], $matches))
+		{
+			$_SESSION['is_app'] = true;
+			return true;
+		}
+		else
+		{
+			$_SESSION['is_app'] = false;
+			return false;
+		}
+	}
+}
+
+function is_ios()
+{
+	
+	if(isset($_SESSION['is_app']))
+		return $_SESSION['is_app'];
+	else
+	{
+		include_once($GLOBALS['includes_root']."/classes/mobile_detect.class.php");
+		$detect = new Mobile_Detect;
+		if($detect->isiOS())
+		{
+			$_SESSION['is_ios'] = true;
+		}
+		else
+		{
+			$_SESSION['is_ios'] = false;
+		}
+	}
+	return $_SESSION['is_ios'];
+	/*
+	if(preg_match_all("/iPhone OS (\d+)_(\d+)\s+/", $_SERVER['HTTP_USER_AGENT'], $matches)){
+		$version = $matches[1][0].'.'.$matches[2][0];
+		return $version;
+	}
+	else
+		return false;
+	*/
+}
+
+function is_android()
+{
+	if(isset($_SESSION['is_android']))
+		return $_SESSION['is_android'];
+	else
+	{
+		include_once($GLOBALS['includes_root']."/classes/mobile_detect.class.php");
+		$detect = new Mobile_Detect;
+		if($detect->isAndroidOS())
+		{
+			$_SESSION['is_android'] = true;
+		}
+		else
+		{
+			$_SESSION['is_android'] = false;
+		}
+	}
+	return $_SESSION['is_android'];
+	/*if(preg_match_all("/Android (\d+(?:\.\d+)+);/i", $_SERVER['HTTP_USER_AGENT'], $matches)){
+		$version = $matches[1][0];
+		return $version;
+	}
+	else
+		return false;
+	*/
 }
